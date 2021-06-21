@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 
 %matplotlib inline
 
-from fbprophet import Prophet
 import logging
 
 logging.getLogger().setLevel(logging.ERROR)

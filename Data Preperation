@@ -1,0 +1,90 @@
+# Importing the Libraries
+import warnings
+warnings.filterwarnings('ignore')
+import numpy as np
+import pandas as pd
+from scipy import stats
+import statsmodels.api as sm
+import matplotlib.pyplot as plt
+
+%matplotlib inline
+
+from fbprophet import Prophet
+import logging
+
+logging.getLogger().setLevel(logging.ERROR)
+
+# Importing the Data
+df = pd.read_csv('FROM THE DB OR OTHER SOURCES')
+
+# Formating the Date-Time Column
+from datetime import datetime
+s = datetime.today().strftime('%Y-%m-%d')
+df['assessment_kickoff_date'] = pd.to_datetime(df['assessment_kickoff_date'], errors='coerce')
+df = df[df['assessment_kickoff_date'] <= s]
+
+# Feature Selection (Column and Status)
+df = df[['assessment_type','assessment_kickoff_date','assessment_schedule_status']]
+
+df = df.loc[(df['assessment_schedule_status'] == 'Completed') | (df['assessment_schedule_status'] == 'In Progress') | (df['assessment_schedule_status'] == 'Scheduled')]
+
+# Creating the SCA Column
+df1 = df
+df1 = df1[df1['assessment_type'] == 'SCA']
+df1['SCA'] = (df1['assessment_type'] == 'SCA').astype(int)
+
+df1['assessment_kickoff_date'] = pd.to_datetime(df1['assessment_kickoff_date'], errors='coerce')
+
+df1 = df1[['assessment_kickoff_date','SCA']]
+df1 = df1.set_index('assessment_kickoff_date').resample('MS').sum()
+
+# Creating the OA Column
+df2 = df
+df2 = df2[df2['assessment_type'] == 'OA']
+df2['OA'] = (df2['assessment_type'] == 'OA').astype(int)
+
+df2['assessment_kickoff_date'] = pd.to_datetime(df2['assessment_kickoff_date'], errors='coerce')
+
+df2 = df2[['assessment_kickoff_date','OA']]
+df2 = df2.set_index('assessment_kickoff_date').resample('MS').sum()
+
+# Creating the LSCA Column
+df3 = df
+df3 = df3[df3['assessment_type'] == 'LSCA']
+df3['LSCA'] = (df3['assessment_type'] == 'LSCA').astype(int)
+
+df3['assessment_kickoff_date'] = pd.to_datetime(df3['assessment_kickoff_date'], errors='coerce')
+
+df3 = df3[['assessment_kickoff_date','LSCA']]
+df3 = df3.set_index('assessment_kickoff_date').resample('MS').sum()
+
+# Creating the TRA Column
+df4 = df
+df4 = df4[df4['assessment_type'] == 'TRA']
+df4['TRA'] = (df4['assessment_type'] == 'TRA').astype(int)
+
+df4['Aassessment_kickoff_date'] = pd.to_datetime(df4['assessment_kickoff_date'], errors='coerce')
+
+df4 = df4[['assessment_kickoff_date','TRA']]
+df4 = df4.set_index('assessment_kickoff_date').resample('MS').sum()
+
+# Creating the ATT Column
+df5 = df
+df5 = df5[df5['assessment_type'] == 'ATT']
+df5['ATT'] = (df5['assessment_type'] == 'ATT').astype(int)
+
+df5['assessment_kickoff_date'] = pd.to_datetime(df5['assessment_kickoff_date'], errors='coerce')
+
+df5 = df5[['assessment_kickoff_date','ATT']]
+df5 = df5.set_index('assessment_kickoff_date').resample('MS').sum()
+
+# Merging the Columns
+data = df1.merge(df2, how='left', on=['assessment_kickoff_date']).merge(df3, how='left', on=['assessment_kickoff_date']).merge(df4, how='left', on=['assessment_kickoff_date']).merge(df5, how='left', on=['assessment_kickoff_date'])
+
+# Creating the Time_Code and Total Assessment Columns
+data['Time_Code'] = np.arange(1,len(data)+1)
+
+data = data[['Time_Code', 'SCA','OA','LSCA','TRA','ATT']]
+
+data['Total_Assessment'] = data.apply(lambda row: row.fillna(0)['SCA'] + row.fillna(0)['OA'] + row.fillna(0)['LSCA'] + row.fillna(0)['TRA'] + row.fillna(0)['ATT'], axis=1)
+#data.head(50)
